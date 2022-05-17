@@ -2,7 +2,8 @@ var testfile = ""
 var outputfile = ""
 
 import nimPNG, arraymancer
-import std/[enumerate, strformat]
+import std/[enumerate, strformat, random]
+randomize()
 
 type
     RGBA = object
@@ -10,6 +11,9 @@ type
         g: uint8
         b: uint8
         a: uint8
+
+proc hexcode(color: RGBA): string =
+    result = "#" & fmt"{cast[int](color.r):>02x}" & fmt"{cast[int](color.g):>02x}" & fmt"{cast[int](color.b):>02x}" & fmt"{cast[int](color.a):>02x}"
 
 proc `==`(left: RGBA, right: RGBA): bool =
     result = (left.r == right.r) and (left.g == right.g) and (left.b == right.b) and (left.a == right.a)
@@ -82,6 +86,7 @@ assert png.width mod 2 == 0
 assert png.height mod 2 == 0
 let outwidth = scale(png.width)
 let outheight= scale(png.height)
+let debugmagenta = RGBA(r: 255'u8, g: 0'u8, b: 255'u8, a: 255'u8)
 echo(outwidth, " ",  outheight)
 var image = newTensor[RGBA]([png.width, png.height])
 for y in 0 ..< png.height:
@@ -93,28 +98,70 @@ for y in 0 ..< png.height:
                         a: cast[uint8](png.data[4 * (y * png.width + x) + 3]))
 
 var upscaled = newTensor[RGBA]([outwidth, outheight])
+# for y in countup(0, png.height-1, 2):
+#     var ym1, yp2: int
+#     if y == 0:
+#         ym1 = y
+#         yp2 = y + 1
+#     elif y == png.height-1:
+#         ym1 = y-1
+#         yp2 = y
+#     else:
+#         ym1 = y-1
+#         yp2 = y + 1
+#     for x in countup(0, png.width-1, 2):
+#         var xm1, xp2: int
+#         if x == 0:
+#             xm1 = x
+#             xp2 = x + 1
+#         elif x == png.width-1:
+#             xm1 = x-1
+#             xp2 = x
+#         else:
+#             xm1 = x-1
+#             xp2 = x + 1
+#         # echo("x: ", x, " y:", y)
+#         # y,  x  y,  x+1
+#         # y+1,x  y+1,x+1
+#         # y,  x  y,  x+1  y,  x+2
+#         # y+1,x  y+1,x+1  y+1,x+2
+#         # y+2,x  y+2,x+1  y+2,x+2
+#         var x3 = scale(x)
+#         var y3 = scale(y)
+#         upscaled[y3, x3] = image[y, x]
+#         upscaled[y3, x3+1] = pick([image[ym1, x], image[ym1, x+1], image[y, x], image[y, x+1]])
+#         upscaled[y3, x3+2] = image[y, x+1]
+#         upscaled[y3+1, x3] = pick([image[y, xm1], image[y+1, xm1], image[y, x], image[y+1, x]])
+#         upscaled[y3+1, x3+1] = pick([image[y+1, x], image[y+1, x+1], image[y, x], image[y, x+1]])
+#         upscaled[y3+1, x3+2] = pick([image[y, xp2], image[y+1, xp2], image[y, x+1], image[y+1, x+1]])
+#         upscaled[y3+2, x3] = image[y+1, x]
+#         upscaled[y3+2, x3+1] = pick([image[yp2, x], image[yp2, x+1], image[y, x], image[y, x+1]])
+#         upscaled[y3+2, x3+2] = image[y+1, x+1]
 for y in countup(0, png.height-1, 2):
+    # echo("y:", y)
     var ym1, yp2: int
     if y == 0:
         ym1 = y
-        yp2 = y + 1
-    elif y == png.height-1:
+        yp2 = y + 2
+    elif y >= png.height-2:
         ym1 = y-1
-        yp2 = y
+        yp2 = y + 1
     else:
         ym1 = y-1
-        yp2 = y + 1
+        yp2 = y + 2
     for x in countup(0, png.width-1, 2):
+        # echo("x:", x)
         var xm1, xp2: int
         if x == 0:
             xm1 = x
-            xp2 = x + 1
-        elif x == png.width-1:
+            xp2 = x + 2
+        elif x >= png.width-2:
             xm1 = x-1
-            xp2 = x
+            xp2 = x + 1
         else:
             xm1 = x-1
-            xp2 = x + 1
+            xp2 = x + 2
+        let rng = 1 == rand(1)
         # echo("x: ", x, " y:", y)
         # y,  x  y,  x+1
         # y+1,x  y+1,x+1
@@ -123,15 +170,183 @@ for y in countup(0, png.height-1, 2):
         # y+2,x  y+2,x+1  y+2,x+2
         var x3 = scale(x)
         var y3 = scale(y)
-        upscaled[y3, x3] = image[y, x]
-        upscaled[y3, x3+1] = pick([image[ym1, x], image[ym1, x+1], image[y, x], image[y, x+1]])
-        upscaled[y3, x3+2] = image[y, x+1]
-        upscaled[y3+1, x3] = pick([image[y, xm1], image[y+1, xm1], image[y, x], image[y+1, x]])
-        upscaled[y3+1, x3+1] = pick([image[y+1, x], image[y+1, x+1], image[y, x], image[y, x+1]])
-        upscaled[y3+1, x3+2] = pick([image[y, xp2], image[y+1, xp2], image[y, x+1], image[y+1, x+1]])
-        upscaled[y3+2, x3] = image[y+1, x]
-        upscaled[y3+2, x3+1] = pick([image[yp2, x], image[yp2, x+1], image[y, x], image[y, x+1]])
-        upscaled[y3+2, x3+2] = image[y+1, x+1]
+        var ar = [image[y, x], image[y, x+1], image[y+1, x], image[y+1, x+1]]
+        var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[y+1, xm1], image[yp2, x], image[yp2, x+1], image[y, xm1]]
+        upscaled[y3, x3] = ar[0]
+        upscaled[y3, x3+2] = ar[1]
+        upscaled[y3+2, x3] = ar[2]
+        upscaled[y3+2, x3+2] = ar[3]
+        let c01 = sum(ar[0]) == sum(ar[1])
+        let c23 = sum(ar[2]) == sum(ar[3])
+        let c02 = sum(ar[0]) == sum(ar[2])
+        if c01 and c23 and c02:
+            upscaled[y3, x3+1] = ar[0]
+            upscaled[y3+1, x3] = ar[0]
+            upscaled[y3+1, x3+1] = ar[0]
+            upscaled[y3+1, x3+2] = ar[0]
+            upscaled[y3+2, x3+1] = ar[0]
+            continue
+        upscaled[y3, x3+1] = debugmagenta
+        upscaled[y3+1, x3] = debugmagenta
+        upscaled[y3+1, x3+1] = debugmagenta
+        upscaled[y3+1, x3+2] = debugmagenta
+        upscaled[y3+2, x3+1] = debugmagenta
+        if c01 and c23:
+            upscaled[y3, x3+1] = ar[0]
+            upscaled[y3+2, x3+1] = ar[2]
+            echo("y: ", y, " ", hexcode(ar[0]), " ", hexcode(ar[2]), " ", ((y > ((png.height shr 1) - 1)) or y == 0) and (y < png.height - 2))
+            if ((y > ((png.height shr 1) - 1)) or y == 0) and (y < png.height - 2):
+                upscaled[y3+1, x3] = ar[0]
+                upscaled[y3+1, x3+1] = ar[0]
+                upscaled[y3+1, x3+2] = ar[0]
+            else:
+                upscaled[y3+1, x3] = ar[2]
+                upscaled[y3+1, x3+1] = ar[2]
+                upscaled[y3+1, x3+2] = ar[2]
+        let c13 = sum(ar[1]) == sum(ar[3])
+        if c02 and c13:
+            upscaled[y3+1, x3] = ar[0]
+            upscaled[y3+1, x3+2] = ar[1]
+            echo("x: ", x, " ", hexcode(ar[0]), " ", hexcode(ar[1]), " ", ((x > ((png.width shr 1) - 1)) or x == 0) and (x < png.width - 2))
+            if ((x > ((png.width shr 1) - 1)) or x == 0) and (x < png.width - 2):
+                upscaled[y3, x3+1] = ar[0]
+                upscaled[y3+1, x3+1] = ar[0]
+                upscaled[y3+2, x3+1] = ar[0]
+            else:
+                upscaled[y3, x3+1] = ar[1]
+                upscaled[y3+1, x3+1] = ar[1]
+                upscaled[y3+2, x3+1] = ar[1]
+        elif c01 and c13: # ◱
+            upscaled[y3, x3+1] = ar[1]
+            upscaled[y3+1, x3+2] = ar[1]
+            upscaled[y3+1, x3+1] = ar[1]
+            case (if ex[7] == ar[1]: 1 else: 0) + (if ex[4] == ar[1]: 2 else: 0):
+                of 0:
+                    upscaled[y3+1, x3] = ar[2]
+                    upscaled[y3+2, x3+1] = ar[2]
+                of 1:
+                    upscaled[y3+1, x3] = ar[2]
+                    upscaled[y3+2, x3+1] = ar[1]
+                of 2:
+                    upscaled[y3+1, x3] = ar[1]
+                    upscaled[y3+2, x3+1] = ar[2]
+                of 3:
+                    upscaled[y3+1, x3] = ar[2]
+                    upscaled[y3+2, x3+1] = ar[2]
+                else:
+                    raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            # if ex[7] == ar[1]:
+            #     upscaled[y3+1, x3] = ar[1]
+            # else:
+            #     upscaled[y3+1, x3] = ar[2]
+            # if ex[4] == ar[1]:
+            #     upscaled[y3+2, x3+1] = ar[1]
+            # else:
+            #     upscaled[y3+2, x3+1] = ar[2]
+        elif c13 and c23: # ◰
+            upscaled[y3+1, x3+2] = ar[3]
+            upscaled[y3+2, x3+1] = ar[3]
+            upscaled[y3+1, x3+1] = ar[3]
+            case (if ex[1] == ar[3]: 1 else: 0) + (if ex[6] == ar[3]: 2 else: 0):
+                of 0:
+                    upscaled[y3, x3+1] = ar[0]
+                    upscaled[y3+1, x3] = ar[0]
+                of 1:
+                    upscaled[y3, x3+1] = ar[0]
+                    upscaled[y3+1, x3] = ar[3]
+                of 2:
+                    upscaled[y3, x3+1] = ar[3]
+                    upscaled[y3+1, x3] = ar[0]
+                of 3:
+                    upscaled[y3, x3+1] = ar[0]
+                    upscaled[y3+1, x3] = ar[0]
+                else:
+                    raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            # if ex[1] == ar[3]:
+            #     upscaled[y3, x3+1] = ar[3]
+            # else:
+            #     upscaled[y3, x3+1] = ar[0]
+            # if ex[6] == ar[3]:
+            #     upscaled[y3+1, x3] = ar[3]
+            # else:
+            #     upscaled[y3+1, x3] = ar[0]
+        elif c23 and c02: # ◳
+            upscaled[y3+1, x3] = ar[2]
+            upscaled[y3+2, x3+1] = ar[2]
+            upscaled[y3+1, x3+1] = ar[2]
+            case (if ex[0] == ar[2]: 1 else: 0) + (if ex[3] == ar[2]: 2 else: 0):
+                of 0:
+                    upscaled[y3, x3+1] = ar[1]
+                    upscaled[y3+1, x3+2] = ar[1]
+                of 1:
+                    upscaled[y3, x3+1] = ar[1]
+                    upscaled[y3+1, x3+2] = ar[2]
+                of 2:
+                    upscaled[y3, x3+1] = ar[2]
+                    upscaled[y3+1, x3+2] = ar[1]
+                of 3:
+                    upscaled[y3, x3+1] = ar[1]
+                    upscaled[y3+1, x3+2] = ar[1]
+                else:
+                    raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            # if ex[0] == ar[2]:
+            #     upscaled[y3, x3+1] = ar[2]
+            # else:
+            #     upscaled[y3, x3+1] = ar[1]
+            # if ex[3] == ar[2]:
+            #     upscaled[y3+1, x3+2] = ar[2]
+            # else:
+            #     upscaled[y3+1, x3+2] = ar[1]
+        elif c02 and c01: # ◲
+            upscaled[y3, x3+1] = ar[0]
+            upscaled[y3+1, x3] = ar[0]
+            upscaled[y3+1, x3+1] = ar[0]
+            # echo((if ex[2] == ar[0]: 1 else: 0) + (if ex[5] == ar[0]: 2 else: 0))
+            # echo(hexcode(ex[2]), " ", hexcode(ar[0]))
+            # for a in ar:
+            #     stdout.write(hexcode(a) & ", ")
+            # echo()
+            # for e in ex:
+            #     stdout.write(hexcode(e) & ", ")
+            # echo()
+            # echo(x, " ", xm1, " ", xp2, " ", y, " ", ym1, " ", yp2)
+            case (if ex[2] == ar[0]: 1 else: 0) + (if ex[5] == ar[0]: 2 else: 0):
+                of 0:
+                    upscaled[y3+1, x3+2] = ar[3]
+                    upscaled[y3+2, x3+1] = ar[3]
+                of 1:
+                    upscaled[y3+1, x3+2] = ar[3]
+                    upscaled[y3+2, x3+1] = ar[0]
+                of 2:
+                    upscaled[y3+1, x3+2] = ar[0]
+                    upscaled[y3+2, x3+1] = ar[3]
+                of 3:
+                    upscaled[y3+1, x3+2] = ar[3]
+                    upscaled[y3+2, x3+1] = ar[3]
+                else:
+                    raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            # if ex[2] == ar[0]:
+            #     upscaled[y3+1, x3+2] = ar[0]
+            # else:
+            #     upscaled[y3+1, x3+2] = ar[3]
+            # if ex[5] == ar[0]:
+            #     upscaled[y3+2, x3+1] = ar[0]
+            # else:
+            #     upscaled[y3+2, x3+1] = ar[3]
+        else:
+            # TODO do this better
+            if rng:
+                upscaled[y3, x3+1] = ar[0]
+                upscaled[y3+1, x3] = ar[2]
+                upscaled[y3+1, x3+1] = debugmagenta
+                upscaled[y3+1, x3+2] = ar[1]
+                upscaled[y3+2, x3+1] = ar[3]
+            else:
+                upscaled[y3, x3+1] = ar[1]
+                upscaled[y3+1, x3] = ar[0]
+                upscaled[y3+1, x3+1] = debugmagenta
+                upscaled[y3+1, x3+2] = ar[3]
+                upscaled[y3+2, x3+1] = ar[2]
 
 var output: seq[uint8] = @[]
 for y in 0 ..< outheight:
