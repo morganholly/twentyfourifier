@@ -243,6 +243,7 @@ for y in countup(0, png.height-1, 2):
                 newpx_top() = top_right()
                 newpx_center() = top_right()
                 newpx_bottom() = top_right()
+            continue
         # TODO make the corners not look like shit
         elif c01 and c13: # ◱
             newpx_top() = top_right()
@@ -263,6 +264,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_left()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            continue
             # if out_left_top() == top_right():
             #     newpx_left() = top_right()
             # else:
@@ -290,6 +292,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_left() = top_left()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            continue
             # if out_top_right() == bottom_right():
             #     newpx_top() = bottom_right()
             # else:
@@ -317,6 +320,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_right() = top_right()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            continue
             # if out_top_left() == bottom_left():
             #     newpx_top() = bottom_left()
             # else:
@@ -353,6 +357,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_right()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            continue
             # if out_right_top() == top_left():
             #     newpx_right() = top_left()
             # else:
@@ -405,8 +410,9 @@ for y in countup(0, png.height-1, 2):
                 else:
                     newpx_center() = bottom_right()
                     newpx_bottom() = bottom_left()
-                newpx_right() = bottom_right() # right
-                newpx_left() = bottom_left() # left
+                newpx_right() = bottom_right()
+                newpx_left() = bottom_left()
+            continue
             # echo(x, " ", y, " ", cLeft, " ", cRight)
             # for a in ar:
             #     stdout_.write(hexcode(a) & ", ")
@@ -416,60 +422,61 @@ for y in countup(0, png.height-1, 2):
             # echo()
         elif c13:
             newpx_right() = top_right() # right
-            newpx_center() = top_left() # ar[0+(2*rng)] # center
-            newpx_top() = top_left() # top_
-            newpx_bottom() = bottom_left() # bottom_
-            newpx_left() = top_left() # ar[0+(2*rng)] # left
-            # let cLeft = (top_left() == out_left_top()) and (bottom_left() == out_left_bottom())
-            # let cRight = (top_left() == out_right_top()) and (bottom_right() == out_right_bottom())
-            # if cLeft and cRight:
-            #     if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
-            #         newpx_left() = top_left()
-            #         newpx_center() = bottom_left()
-            #         newpx_right() = bottom_right()
-            #         if bottom_left() == out_bottom_left():
-            #             newpx_bottom() = bottom_left()
-            #         else:
-            #             newpx_bottom() = bottom_right()
-            #     else:
-            #         newpx_left() = bottom_left()
-            #         newpx_center() = bottom_right()
-            #         newpx_right() = top_left()
-            #         if bottom_right() == out_bottom_right():
-            #             newpx_bottom() = bottom_right()
-            #         else:
-            #             newpx_bottom() = bottom_left()
-            # elif cLeft:
-            #     newpx_left() = top_left()
-            #     newpx_center() = bottom_left()
-            #     newpx_right() = bottom_right()
-            #     if bottom_left() == out_bottom_left():
-            #         newpx_bottom() = bottom_left()
-            #     else:
-            #         newpx_bottom() = bottom_right()
-            # elif cRight:
-            #     newpx_left() = bottom_left()
-            #     newpx_center() = bottom_right()
-            #     newpx_right() = top_left()
-            #     if bottom_right() == out_bottom_right():
-            #         newpx_bottom() = bottom_right()
-            #     else:
-            #         newpx_bottom() = bottom_left()
-            # else:
-            #     if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
-            #         newpx_center() = bottom_left()
-            #         newpx_bottom() = bottom_right()
-            #     else:
-            #         newpx_center() = bottom_right()
-            #         newpx_bottom() = bottom_left()
-            #     newpx_right() = bottom_right() # right
-            #     newpx_left() = bottom_left() # left
+            # newpx_center() = top_left() # ar[0+(2*rng)] # center
+            # newpx_top() = top_left() # top_
+            # newpx_bottom() = bottom_left() # bottom_
+            # newpx_left() = top_left() # ar[0+(2*rng)] # left
+            let cTop = (top_right() == out_top_right()) and (top_left() == out_top_left())
+            let cBottom = (top_right() == out_bottom_right()) and (bottom_left() == out_bottom_left())
+            if cTop and cBottom:
+                if dist(top_right(), top_left()) < dist(top_right(), bottom_left()): # top < bottom, dist to 1/3
+                    newpx_top() = top_right()
+                    newpx_center() = top_left()
+                    newpx_bottom() = bottom_left()
+                    if top_left() == out_left_top():
+                        newpx_left() = top_left()
+                    else:
+                        newpx_left() = bottom_left()
+                else:
+                    newpx_top() = top_right()
+                    newpx_center() = bottom_left()
+                    newpx_bottom() = top_right()
+                    if bottom_left() == out_left_bottom():
+                        newpx_left() = bottom_left()
+                    else:
+                        newpx_left() = top_left()
+            elif cTop:
+                newpx_top() = top_right()
+                newpx_center() = top_left()
+                newpx_bottom() = bottom_left()
+                if top_left() == out_left_top():
+                    newpx_left() = top_left()
+                else:
+                    newpx_left() = bottom_left()
+            elif cBottom:
+                newpx_top() = top_right()
+                newpx_center() = bottom_left()
+                newpx_bottom() = top_right()
+                if bottom_left() == out_left_bottom():
+                    newpx_left() = bottom_left()
+                else:
+                    newpx_left() = top_left()
+            else:
+                if dist(top_right(), top_left()) < dist(top_right(), bottom_left()): # top < bottom, dist to 1/3
+                    newpx_center() = top_left()
+                    newpx_left() = bottom_left()
+                else:
+                    newpx_center() = bottom_left()
+                    newpx_left() = top_left()
+                newpx_bottom() = bottom_left()
+                newpx_top() = top_left()
+            continue
         elif c23:
             newpx_bottom() = bottom_right() # bottom_
             let cLeft = (bottom_left() == out_left_bottom()) and (top_left() == out_left_top())
             let cRight = (bottom_left() == out_right_bottom()) and (top_right() == out_right_top())
             if cLeft and cRight:
-                if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 0/1
+                if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 2/3
                     newpx_left() = bottom_left()
                     newpx_center() = top_left()
                     newpx_right() = top_right()
@@ -502,20 +509,66 @@ for y in countup(0, png.height-1, 2):
                 else:
                     newpx_top() = top_left()
             else:
-                if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 0/1
+                if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 2/3
                     newpx_center() = top_left()
                     newpx_top() = top_right()
                 else:
                     newpx_center() = top_right()
                     newpx_top() = top_left()
-                newpx_right() = top_right() # right
-                newpx_left() = top_left() # left
+                newpx_right() = top_right()
+                newpx_left() = top_left()
+            continue
         elif c02:
             newpx_left() = bottom_left() # left
-            newpx_center() = top_right() # ar[1+(2*rng)] # center
-            newpx_top() = top_right() # top_
-            newpx_bottom() = bottom_right() # bottom_
-            newpx_right() = top_right() # ar[1+(2*rng)] # right
+            # newpx_center() = top_right() # ar[1+(2*rng)] # center
+            # newpx_top() = top_right() # top_
+            # newpx_bottom() = bottom_right() # bottom_
+            # newpx_right() = top_right() # ar[1+(2*rng)] # right
+            let cTop = (top_left() == out_top_left()) and (top_right() == out_top_right())
+            let cBottom = (top_left() == out_bottom_left()) and (bottom_right() == out_bottom_right())
+            if cTop and cBottom:
+                if dist(top_left(), top_right()) < dist(top_left(), bottom_right()): # top < bottom, dist to 1/3
+                    newpx_top() = top_left()
+                    newpx_center() = top_right()
+                    newpx_bottom() = bottom_right()
+                    if top_right() == out_right_top():
+                        newpx_right() = top_right()
+                    else:
+                        newpx_right() = bottom_right()
+                else:
+                    newpx_top() = top_left()
+                    newpx_center() = bottom_right()
+                    newpx_bottom() = top_left()
+                    if bottom_right() == out_right_bottom():
+                        newpx_right() = bottom_right()
+                    else:
+                        newpx_right() = top_right()
+            elif cTop:
+                newpx_top() = top_left()
+                newpx_center() = top_right()
+                newpx_bottom() = bottom_right()
+                if top_right() == out_right_top():
+                    newpx_right() = top_right()
+                else:
+                    newpx_right() = bottom_right()
+            elif cBottom:
+                newpx_top() = top_left()
+                newpx_center() = bottom_right()
+                newpx_bottom() = top_left()
+                if bottom_right() == out_right_bottom():
+                    newpx_right() = bottom_right()
+                else:
+                    newpx_right() = top_right()
+            else:
+                if dist(top_left(), top_right()) < dist(top_left(), bottom_right()): # top < bottom, dist to 1/3
+                    newpx_center() = top_right()
+                    newpx_right() = bottom_right()
+                else:
+                    newpx_center() = bottom_right()
+                    newpx_right() = top_right()
+                newpx_bottom() = bottom_right()
+                newpx_top() = top_right()
+            continue
         # else:
             # TODO do this better
             # if rng:
