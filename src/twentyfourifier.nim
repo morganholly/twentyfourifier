@@ -169,7 +169,7 @@ for y in countup(0, png.height-1, 2):
         else:
             xm1 = x-1
             xp2 = x + 2
-        let rng = 1 == rand(1)
+        let rng = rand(1)
         # echo("x: ", x, " y:", y)
         # y,  x  y,  x+1
         # y+1,x  y+1,x+1
@@ -178,183 +178,380 @@ for y in countup(0, png.height-1, 2):
         # y+2,x  y+2,x+1  y+2,x+2
         var x3 = scale(x)
         var y3 = scale(y)
-        var ar = [image[y, x], image[y, x+1], image[y+1, x], image[y+1, x+1]]
-        var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[y+1, xm1], image[yp2, x], image[yp2, x+1], image[y, xm1]]
-        upscaled[y3, x3] = ar[0]
-        upscaled[y3, x3+2] = ar[1]
-        upscaled[y3+2, x3] = ar[2]
-        upscaled[y3+2, x3+2] = ar[3]
-        let c01 = sum(ar[0]) == sum(ar[1])
-        let c23 = sum(ar[2]) == sum(ar[3])
-        let c02 = sum(ar[0]) == sum(ar[2])
+        template top_left(): untyped =
+            image[y, x]
+        template top_right(): untyped =
+            image[y, x+1]
+        template bottom_left(): untyped =
+            image[y+1, x]
+        template bottom_right(): untyped =
+            image[y+1, x+1]
+        template out_top_left(): untyped =
+            image[ym1, x]
+        template out_top_right(): untyped =
+            image[ym1, x+1]
+        template out_right_top(): untyped =
+            image[y, xp2]
+        template out_right_bottom(): untyped =
+            image[y+1, xp2]
+        template out_bottom_right(): untyped =
+            image[yp2, x+1]
+        template out_bottom_left(): untyped =
+            image[yp2, x]
+        template out_left_bottom(): untyped =
+            image[y+1, xm1]
+        template out_left_top(): untyped =
+            image[y, xm1]
+        template newpx_top(): untyped =
+            upscaled[y3, x3+1]
+        template newpx_left(): untyped =
+            upscaled[y3+1, x3]
+        template newpx_center(): untyped =
+            upscaled[y3+1, x3+1]
+        template newpx_right(): untyped =
+            upscaled[y3+1, x3+2]
+        template newpx_bottom(): untyped =
+            upscaled[y3+2, x3+1]
+        # var ar = [image[y, x], image[y, x+1], image[y+1, x], image[y+1, x+1]]
+        # # var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[y+1, xm1], image[yp2, x], image[yp2, x+1], image[y, xm1]] # why did this make it work right before????
+        # var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[yp2, x+1], image[yp2, x], image[y+1, xm1], image[y, xm1]]
+        upscaled[y3, x3] = top_left()
+        upscaled[y3, x3+2] = top_right()
+        upscaled[y3+2, x3] = bottom_left()
+        upscaled[y3+2, x3+2] = bottom_right()
+        let c01 = sum(top_left()) == sum(top_right())
+        let c23 = sum(bottom_left()) == sum(bottom_right())
+        let c02 = sum(top_left()) == sum(bottom_left())
         if c01 and c23 and c02:
-            upscaled[y3, x3+1] = ar[0]
-            upscaled[y3+1, x3] = ar[0]
-            upscaled[y3+1, x3+1] = ar[0]
-            upscaled[y3+1, x3+2] = ar[0]
-            upscaled[y3+2, x3+1] = ar[0]
+            newpx_top() = top_left()
+            newpx_left() = top_left()
+            newpx_center() = top_left()
+            newpx_right() = top_left()
+            newpx_bottom() = top_left()
             continue
-        upscaled[y3, x3+1] = debugmagenta
-        upscaled[y3+1, x3] = debugmagenta
-        upscaled[y3+1, x3+1] = debugmagenta
-        upscaled[y3+1, x3+2] = debugmagenta
-        upscaled[y3+2, x3+1] = debugmagenta
+        newpx_top() = debugmagenta
+        newpx_left() = debugmagenta
+        newpx_center() = debugmagenta
+        newpx_right() = debugmagenta
+        newpx_bottom() = debugmagenta
         if c01 and c23:
-            upscaled[y3, x3+1] = ar[0]
-            upscaled[y3+2, x3+1] = ar[2]
-            echo("y: ", y, " ", hexcode(ar[0]), " ", hexcode(ar[2]), " ", ((y > ((png.height shr 1) - 1)) or y == 0) and (y < png.height - 2))
+            newpx_top() = top_left()
+            newpx_bottom() = bottom_left()
+            # echo("y: ", y, " ", hexcode(top_left()), " ", hexcode(bottom_left()), " ", ((y > ((png.height shr 1) - 1)) or y == 0) and (y < png.height - 2))
             if ((y > ((png.height shr 1) - 1)) or y == 0) and (y < png.height - 2):
-                upscaled[y3+1, x3] = ar[0]
-                upscaled[y3+1, x3+1] = ar[0]
-                upscaled[y3+1, x3+2] = ar[0]
+                newpx_left() = top_left()
+                newpx_center() = top_left()
+                newpx_right() = top_left()
             else:
-                upscaled[y3+1, x3] = ar[2]
-                upscaled[y3+1, x3+1] = ar[2]
-                upscaled[y3+1, x3+2] = ar[2]
-        let c13 = sum(ar[1]) == sum(ar[3])
+                newpx_left() = bottom_left()
+                newpx_center() = bottom_left()
+                newpx_right() = bottom_left()
+            continue
+        let c13 = sum(top_right()) == sum(bottom_right())
         if c02 and c13:
-            upscaled[y3+1, x3] = ar[0]
-            upscaled[y3+1, x3+2] = ar[1]
-            echo("x: ", x, " ", hexcode(ar[0]), " ", hexcode(ar[1]), " ", ((x > ((png.width shr 1) - 1)) or x == 0) and (x < png.width - 2))
+            newpx_left() = top_left()
+            newpx_right() = top_right()
+            # echo("x: ", x, " ", hexcode(top_left()), " ", hexcode(top_right()), " ", ((x > ((png.width shr 1) - 1)) or x == 0) and (x < png.width - 2))
             if ((x > ((png.width shr 1) - 1)) or x == 0) and (x < png.width - 2):
-                upscaled[y3, x3+1] = ar[0]
-                upscaled[y3+1, x3+1] = ar[0]
-                upscaled[y3+2, x3+1] = ar[0]
+                newpx_top() = top_left()
+                newpx_center() = top_left()
+                newpx_bottom() = top_left()
             else:
-                upscaled[y3, x3+1] = ar[1]
-                upscaled[y3+1, x3+1] = ar[1]
-                upscaled[y3+2, x3+1] = ar[1]
+                newpx_top() = top_right()
+                newpx_center() = top_right()
+                newpx_bottom() = top_right()
+        # TODO make the corners not look like shit
         elif c01 and c13: # ◱
-            upscaled[y3, x3+1] = ar[1]
-            upscaled[y3+1, x3+2] = ar[1]
-            upscaled[y3+1, x3+1] = ar[1]
-            case (if ex[7] == ar[1]: 1 else: 0) + (if ex[4] == ar[1]: 2 else: 0):
+            newpx_top() = top_right()
+            newpx_right() = top_right()
+            newpx_center() = top_right()
+            case (if out_left_top() == top_right(): 1 else: 0) + (if out_bottom_right() == top_right(): 2 else: 0):
                 of 0:
-                    upscaled[y3+1, x3] = ar[2]
-                    upscaled[y3+2, x3+1] = ar[2]
+                    newpx_left() = bottom_left()
+                    newpx_bottom() = bottom_left()
                 of 1:
-                    upscaled[y3+1, x3] = ar[2]
-                    upscaled[y3+2, x3+1] = ar[1]
+                    newpx_left() = bottom_left()
+                    newpx_bottom() = top_right()
                 of 2:
-                    upscaled[y3+1, x3] = ar[1]
-                    upscaled[y3+2, x3+1] = ar[2]
+                    newpx_left() = top_right()
+                    newpx_bottom() = bottom_left()
                 of 3:
-                    upscaled[y3+1, x3] = ar[2]
-                    upscaled[y3+2, x3+1] = ar[2]
+                    newpx_left() = bottom_left()
+                    newpx_bottom() = bottom_left()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
-            # if ex[7] == ar[1]:
-            #     upscaled[y3+1, x3] = ar[1]
+            # if out_left_top() == top_right():
+            #     newpx_left() = top_right()
             # else:
-            #     upscaled[y3+1, x3] = ar[2]
-            # if ex[4] == ar[1]:
-            #     upscaled[y3+2, x3+1] = ar[1]
+            #     newpx_left() = bottom_left()
+            # if out_bottom_right() == top_right():
+            #     newpx_bottom() = top_right()
             # else:
-            #     upscaled[y3+2, x3+1] = ar[2]
+            #     newpx_bottom() = bottom_left()
         elif c13 and c23: # ◰
-            upscaled[y3+1, x3+2] = ar[3]
-            upscaled[y3+2, x3+1] = ar[3]
-            upscaled[y3+1, x3+1] = ar[3]
-            case (if ex[1] == ar[3]: 1 else: 0) + (if ex[6] == ar[3]: 2 else: 0):
+            newpx_right() = bottom_right()
+            newpx_bottom() = bottom_right()
+            newpx_center() = bottom_right()
+            case (if out_top_right() == bottom_right(): 1 else: 0) + (if out_left_bottom() == bottom_right(): 2 else: 0):
                 of 0:
-                    upscaled[y3, x3+1] = ar[0]
-                    upscaled[y3+1, x3] = ar[0]
+                    newpx_top() = top_left()
+                    newpx_left() = top_left()
                 of 1:
-                    upscaled[y3, x3+1] = ar[0]
-                    upscaled[y3+1, x3] = ar[3]
+                    newpx_top() = top_left()
+                    newpx_left() = bottom_right()
                 of 2:
-                    upscaled[y3, x3+1] = ar[3]
-                    upscaled[y3+1, x3] = ar[0]
+                    newpx_top() = bottom_right()
+                    newpx_left() = top_left()
                 of 3:
-                    upscaled[y3, x3+1] = ar[0]
-                    upscaled[y3+1, x3] = ar[0]
+                    newpx_top() = top_left()
+                    newpx_left() = top_left()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
-            # if ex[1] == ar[3]:
-            #     upscaled[y3, x3+1] = ar[3]
+            # if out_top_right() == bottom_right():
+            #     newpx_top() = bottom_right()
             # else:
-            #     upscaled[y3, x3+1] = ar[0]
-            # if ex[6] == ar[3]:
-            #     upscaled[y3+1, x3] = ar[3]
+            #     newpx_top() = top_left()
+            # if out_left_bottom() == bottom_right():
+            #     newpx_left() = bottom_right()
             # else:
-            #     upscaled[y3+1, x3] = ar[0]
+            #     newpx_left() = top_left()
         elif c23 and c02: # ◳
-            upscaled[y3+1, x3] = ar[2]
-            upscaled[y3+2, x3+1] = ar[2]
-            upscaled[y3+1, x3+1] = ar[2]
-            case (if ex[0] == ar[2]: 1 else: 0) + (if ex[3] == ar[2]: 2 else: 0):
+            newpx_left() = bottom_left()
+            newpx_bottom() = bottom_left()
+            newpx_center() = bottom_left()
+            case (if out_top_left() == bottom_left(): 1 else: 0) + (if out_right_bottom() == bottom_left(): 2 else: 0):
                 of 0:
-                    upscaled[y3, x3+1] = ar[1]
-                    upscaled[y3+1, x3+2] = ar[1]
+                    newpx_top() = top_right()
+                    newpx_right() = top_right()
                 of 1:
-                    upscaled[y3, x3+1] = ar[1]
-                    upscaled[y3+1, x3+2] = ar[2]
+                    newpx_top() = top_right()
+                    newpx_right() = bottom_left()
                 of 2:
-                    upscaled[y3, x3+1] = ar[2]
-                    upscaled[y3+1, x3+2] = ar[1]
+                    newpx_top() = bottom_left()
+                    newpx_right() = top_right()
                 of 3:
-                    upscaled[y3, x3+1] = ar[1]
-                    upscaled[y3+1, x3+2] = ar[1]
+                    newpx_top() = top_right()
+                    newpx_right() = top_right()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
-            # if ex[0] == ar[2]:
-            #     upscaled[y3, x3+1] = ar[2]
+            # if out_top_left() == bottom_left():
+            #     newpx_top() = bottom_left()
             # else:
-            #     upscaled[y3, x3+1] = ar[1]
-            # if ex[3] == ar[2]:
-            #     upscaled[y3+1, x3+2] = ar[2]
+            #     newpx_top() = top_right()
+            # if out_right_bottom() == bottom_left():
+            #     newpx_right() = bottom_left()
             # else:
-            #     upscaled[y3+1, x3+2] = ar[1]
+            #     newpx_right() = top_right()
         elif c02 and c01: # ◲
-            upscaled[y3, x3+1] = ar[0]
-            upscaled[y3+1, x3] = ar[0]
-            upscaled[y3+1, x3+1] = ar[0]
-            # echo((if ex[2] == ar[0]: 1 else: 0) + (if ex[5] == ar[0]: 2 else: 0))
-            # echo(hexcode(ex[2]), " ", hexcode(ar[0]))
+            newpx_top() = top_left()
+            newpx_left() = top_left()
+            newpx_center() = top_left()
+            # echo((if out_right_top() == top_left(): 1 else: 0) + (if out_bottom_left() == top_left(): 2 else: 0))
+            # echo(hexcode(out_right_top()), " ", hexcode(top_left()))
             # for a in ar:
-            #     stdout.write(hexcode(a) & ", ")
+            #     stdout_.write(hexcode(a) & ", ")
             # echo()
             # for e in ex:
-            #     stdout.write(hexcode(e) & ", ")
+            #     stdout_.write(hexcode(e) & ", ")
             # echo()
             # echo(x, " ", xm1, " ", xp2, " ", y, " ", ym1, " ", yp2)
-            case (if ex[2] == ar[0]: 1 else: 0) + (if ex[5] == ar[0]: 2 else: 0):
+            case (if out_right_top() == top_left(): 1 else: 0) + (if out_bottom_left() == top_left(): 2 else: 0):
                 of 0:
-                    upscaled[y3+1, x3+2] = ar[3]
-                    upscaled[y3+2, x3+1] = ar[3]
+                    newpx_right() = bottom_right()
+                    newpx_bottom() = bottom_right()
                 of 1:
-                    upscaled[y3+1, x3+2] = ar[3]
-                    upscaled[y3+2, x3+1] = ar[0]
+                    newpx_right() = bottom_right()
+                    newpx_bottom() = top_left()
                 of 2:
-                    upscaled[y3+1, x3+2] = ar[0]
-                    upscaled[y3+2, x3+1] = ar[3]
+                    newpx_right() = top_left()
+                    newpx_bottom() = bottom_right()
                 of 3:
-                    upscaled[y3+1, x3+2] = ar[3]
-                    upscaled[y3+2, x3+1] = ar[3]
+                    newpx_right() = bottom_right()
+                    newpx_bottom() = bottom_right()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
-            # if ex[2] == ar[0]:
-            #     upscaled[y3+1, x3+2] = ar[0]
+            # if out_right_top() == top_left():
+            #     newpx_right() = top_left()
             # else:
-            #     upscaled[y3+1, x3+2] = ar[3]
-            # if ex[5] == ar[0]:
-            #     upscaled[y3+2, x3+1] = ar[0]
+            #     newpx_right() = bottom_right()
+            # if out_bottom_left() == top_left():
+            #     newpx_bottom() = top_left()
             # else:
-            #     upscaled[y3+2, x3+1] = ar[3]
-        else:
-            # TODO do this better
-            if rng:
-                upscaled[y3, x3+1] = ar[0]
-                upscaled[y3+1, x3] = ar[2]
-                upscaled[y3+1, x3+1] = debugmagenta
-                upscaled[y3+1, x3+2] = ar[1]
-                upscaled[y3+2, x3+1] = ar[3]
+            #     newpx_bottom() = bottom_right()
+        elif c01:
+            newpx_top() = top_left() # top_
+            let cLeft = (top_left() == out_left_top()) and (bottom_left() == out_left_bottom())
+            let cRight = (top_left() == out_right_top()) and (bottom_right() == out_right_bottom())
+            if cLeft and cRight:
+                if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
+                    newpx_left() = top_left()
+                    newpx_center() = bottom_left()
+                    newpx_right() = bottom_right()
+                    if bottom_left() == out_bottom_left():
+                        newpx_bottom() = bottom_left()
+                    else:
+                        newpx_bottom() = bottom_right()
+                else:
+                    newpx_left() = bottom_left()
+                    newpx_center() = bottom_right()
+                    newpx_right() = top_left()
+                    if bottom_right() == out_bottom_right():
+                        newpx_bottom() = bottom_right()
+                    else:
+                        newpx_bottom() = bottom_left()
+            elif cLeft:
+                newpx_left() = top_left()
+                newpx_center() = bottom_left()
+                newpx_right() = bottom_right()
+                if bottom_left() == out_bottom_left():
+                    newpx_bottom() = bottom_left()
+                else:
+                    newpx_bottom() = bottom_right()
+            elif cRight:
+                newpx_left() = bottom_left()
+                newpx_center() = bottom_right()
+                newpx_right() = top_left()
+                if bottom_right() == out_bottom_right():
+                    newpx_bottom() = bottom_right()
+                else:
+                    newpx_bottom() = bottom_left()
             else:
-                upscaled[y3, x3+1] = ar[1]
-                upscaled[y3+1, x3] = ar[0]
-                upscaled[y3+1, x3+1] = debugmagenta
-                upscaled[y3+1, x3+2] = ar[3]
-                upscaled[y3+2, x3+1] = ar[2]
+                if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
+                    newpx_center() = bottom_left()
+                    newpx_bottom() = bottom_right()
+                else:
+                    newpx_center() = bottom_right()
+                    newpx_bottom() = bottom_left()
+                newpx_right() = bottom_right() # right
+                newpx_left() = bottom_left() # left
+            # echo(x, " ", y, " ", cLeft, " ", cRight)
+            # for a in ar:
+            #     stdout_.write(hexcode(a) & ", ")
+            # echo()
+            # for e in ex:
+            #     stdout_.write(hexcode(e) & ", ")
+            # echo()
+        elif c13:
+            newpx_right() = top_right() # right
+            newpx_center() = top_left() # ar[0+(2*rng)] # center
+            newpx_top() = top_left() # top_
+            newpx_bottom() = bottom_left() # bottom_
+            newpx_left() = top_left() # ar[0+(2*rng)] # left
+            # let cLeft = (top_left() == out_left_top()) and (bottom_left() == out_left_bottom())
+            # let cRight = (top_left() == out_right_top()) and (bottom_right() == out_right_bottom())
+            # if cLeft and cRight:
+            #     if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
+            #         newpx_left() = top_left()
+            #         newpx_center() = bottom_left()
+            #         newpx_right() = bottom_right()
+            #         if bottom_left() == out_bottom_left():
+            #             newpx_bottom() = bottom_left()
+            #         else:
+            #             newpx_bottom() = bottom_right()
+            #     else:
+            #         newpx_left() = bottom_left()
+            #         newpx_center() = bottom_right()
+            #         newpx_right() = top_left()
+            #         if bottom_right() == out_bottom_right():
+            #             newpx_bottom() = bottom_right()
+            #         else:
+            #             newpx_bottom() = bottom_left()
+            # elif cLeft:
+            #     newpx_left() = top_left()
+            #     newpx_center() = bottom_left()
+            #     newpx_right() = bottom_right()
+            #     if bottom_left() == out_bottom_left():
+            #         newpx_bottom() = bottom_left()
+            #     else:
+            #         newpx_bottom() = bottom_right()
+            # elif cRight:
+            #     newpx_left() = bottom_left()
+            #     newpx_center() = bottom_right()
+            #     newpx_right() = top_left()
+            #     if bottom_right() == out_bottom_right():
+            #         newpx_bottom() = bottom_right()
+            #     else:
+            #         newpx_bottom() = bottom_left()
+            # else:
+            #     if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
+            #         newpx_center() = bottom_left()
+            #         newpx_bottom() = bottom_right()
+            #     else:
+            #         newpx_center() = bottom_right()
+            #         newpx_bottom() = bottom_left()
+            #     newpx_right() = bottom_right() # right
+            #     newpx_left() = bottom_left() # left
+        elif c23:
+            newpx_bottom() = bottom_right() # bottom_
+            let cLeft = (bottom_left() == out_left_bottom()) and (top_left() == out_left_top())
+            let cRight = (bottom_left() == out_right_bottom()) and (top_right() == out_right_top())
+            if cLeft and cRight:
+                if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 0/1
+                    newpx_left() = bottom_left()
+                    newpx_center() = top_left()
+                    newpx_right() = top_right()
+                    if top_left() == out_top_left():
+                        newpx_top() = top_left()
+                    else:
+                        newpx_top() = top_right()
+                else:
+                    newpx_left() = top_left()
+                    newpx_center() = top_right()
+                    newpx_right() = bottom_left()
+                    if top_right() == out_top_right():
+                        newpx_top() = top_right()
+                    else:
+                        newpx_top() = top_left()
+            elif cLeft:
+                newpx_left() = bottom_left()
+                newpx_center() = top_left()
+                newpx_right() = top_right()
+                if top_left() == out_top_left():
+                    newpx_top() = top_left()
+                else:
+                    newpx_top() = top_right()
+            elif cRight:
+                newpx_left() = top_left()
+                newpx_center() = top_right()
+                newpx_right() = bottom_left()
+                if top_right() == out_top_right():
+                    newpx_top() = top_right()
+                else:
+                    newpx_top() = top_left()
+            else:
+                if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 0/1
+                    newpx_center() = top_left()
+                    newpx_top() = top_right()
+                else:
+                    newpx_center() = top_right()
+                    newpx_top() = top_left()
+                newpx_right() = top_right() # right
+                newpx_left() = top_left() # left
+        elif c02:
+            newpx_left() = bottom_left() # left
+            newpx_center() = top_right() # ar[1+(2*rng)] # center
+            newpx_top() = top_right() # top_
+            newpx_bottom() = bottom_right() # bottom_
+            newpx_right() = top_right() # ar[1+(2*rng)] # right
+        # else:
+            # TODO do this better
+            # if rng:
+            #     newpx_top() = top_left()
+            #     newpx_left() = bottom_left()
+            #     newpx_center() = debugmagenta
+            #     newpx_right() = top_right()
+            #     newpx_bottom() = bottom_right()
+            # else:
+            #     newpx_top() = top_right()
+            #     newpx_left() = top_left()
+            #     newpx_center() = debugmagenta
+            #     newpx_right() = bottom_right()
+            #     newpx_bottom() = bottom_left()
+            # newpx_top() = closest([top_left(), top_right(), bottom_left(), bottom_right()], avg(top_left(), top_right()))
+            # newpx_left() = closest([top_left(), top_right(), bottom_left(), bottom_right()], avg(top_right(), bottom_left()))
+            # newpx_center() = closest([top_left(), top_right(), bottom_left(), bottom_right()], avg(avg(top_left(), top_right()), avg(bottom_left(), bottom_right())))
+            # newpx_right() = closest([top_left(), top_right(), bottom_left(), bottom_right()], avg(bottom_left(), bottom_right()))
+            # newpx_bottom() = closest([top_left(), top_right(), bottom_left(), bottom_right()], avg(bottom_right(), top_left()))
 
 var output: seq[uint8] = @[]
 for y in 0 ..< outheight:
