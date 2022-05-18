@@ -178,40 +178,23 @@ for y in countup(0, png.height-1, 2):
         # y+2,x  y+2,x+1  y+2,x+2
         var x3 = scale(x)
         var y3 = scale(y)
-        template top_left(): untyped =
-            image[y, x]
-        template top_right(): untyped =
-            image[y, x+1]
-        template bottom_left(): untyped =
-            image[y+1, x]
-        template bottom_right(): untyped =
-            image[y+1, x+1]
-        template out_top_left(): untyped =
-            image[ym1, x]
-        template out_top_right(): untyped =
-            image[ym1, x+1]
-        template out_right_top(): untyped =
-            image[y, xp2]
-        template out_right_bottom(): untyped =
-            image[y+1, xp2]
-        template out_bottom_right(): untyped =
-            image[yp2, x+1]
-        template out_bottom_left(): untyped =
-            image[yp2, x]
-        template out_left_bottom(): untyped =
-            image[y+1, xm1]
-        template out_left_top(): untyped =
-            image[y, xm1]
-        template newpx_top(): untyped =
-            upscaled[y3, x3+1]
-        template newpx_left(): untyped =
-            upscaled[y3+1, x3]
-        template newpx_center(): untyped =
-            upscaled[y3+1, x3+1]
-        template newpx_right(): untyped =
-            upscaled[y3+1, x3+2]
-        template newpx_bottom(): untyped =
-            upscaled[y3+2, x3+1]
+        template top_left(): untyped = image[y, x]
+        template top_right(): untyped = image[y, x+1]
+        template bottom_left(): untyped = image[y+1, x]
+        template bottom_right(): untyped = image[y+1, x+1]
+        template out_top_left(): untyped = image[ym1, x]
+        template out_top_right(): untyped = image[ym1, x+1]
+        template out_right_top(): untyped = image[y, xp2]
+        template out_right_bottom(): untyped = image[y+1, xp2]
+        template out_bottom_right(): untyped = image[yp2, x+1]
+        template out_bottom_left(): untyped = image[yp2, x]
+        template out_left_bottom(): untyped = image[y+1, xm1]
+        template out_left_top(): untyped = image[y, xm1]
+        template newpx_top(): untyped = upscaled[y3, x3+1]
+        template newpx_left(): untyped = upscaled[y3+1, x3]
+        template newpx_center(): untyped = upscaled[y3+1, x3+1]
+        template newpx_right(): untyped = upscaled[y3+1, x3+2]
+        template newpx_bottom(): untyped = upscaled[y3+2, x3+1]
         # var ar = [image[y, x], image[y, x+1], image[y+1, x], image[y+1, x+1]]
         # # var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[y+1, xm1], image[yp2, x], image[yp2, x+1], image[y, xm1]] # why did this make it work right before????
         # var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[yp2, x+1], image[yp2, x], image[y+1, xm1], image[y, xm1]]
