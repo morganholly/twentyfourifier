@@ -569,6 +569,65 @@ for y in countup(0, png.height-1, 2):
                 newpx_bottom() = bottom_right()
                 newpx_top() = top_right()
             continue
+        let c03 = sum(top_left()) == sum(bottom_right())
+        let c12 = sum(top_right()) == sum(bottom_left())
+        let arr_all = [top_left(),
+                        top_right(),
+                        bottom_left(),
+                        bottom_right(),
+                        out_top_left(),
+                        out_top_right(),
+                        out_right_top(),
+                        out_right_bottom(),
+                        out_bottom_right(),
+                        out_bottom_left(),
+                        out_left_bottom(),
+                        out_left_top(),
+                        newpx_top(),
+                        newpx_left(),
+                        newpx_center(),
+                        newpx_right(),
+                        newpx_bottom()]
+        if c03 and c12:
+            discard
+        elif c03:
+            newpx_center() = top_left()
+            if dist(top_left(), top_right()) < dist(top_left(), bottom_left()):
+                var newpx1 = closest(arr_all, avg(top_left(), top_right()))
+                newpx_top() = newpx1
+                newpx_right() = newpx1
+                newpx_left() = closest(arr_all, avg(bottom_left(), out_left_top()))
+                newpx_bottom() = closest(arr_all, avg(bottom_left(), out_bottom_right()))
+            else:
+                var newpx1 = closest(arr_all, avg(top_left(), bottom_left()))
+                newpx_left() = newpx1
+                newpx_bottom() = newpx1
+                newpx_top() = closest(arr_all, avg(top_right(), out_top_left()))
+                newpx_right() = closest(arr_all, avg(top_right(), out_right_bottom()))
+        elif c12:
+            newpx_center() = top_right()
+            if dist(top_right(), top_left()) < dist(top_right(), bottom_right()):
+                var newpx1 = closest(arr_all, avg(top_right(), top_left()))
+                newpx_top() = newpx1
+                newpx_left() = newpx1
+                newpx_right() = closest(arr_all, avg(bottom_right(), out_right_top()))
+                newpx_bottom() = closest(arr_all, avg(bottom_right(), out_bottom_left()))
+            else:
+                var newpx1 = closest(arr_all, avg(top_right(), bottom_right()))
+                newpx_right() = newpx1
+                newpx_bottom() = newpx1
+                newpx_top() = closest(arr_all, avg(top_left(), out_top_right()))
+                newpx_left() = closest(arr_all, avg(top_left(), out_left_bottom()))
+        else:
+            discard
+        # if (newpx_top() == debugmagenta) and (newpx_center() != debugmagenta):
+        #     echo("x", x, " y", y, " ", c03, " ", c12)
+        #     for a in ar:
+        #         stdout.write(hexcode(a) & ", ")
+        #     echo()
+        #     for e in ex:
+        #         stdout.write(hexcode(e) & ", ")
+        #     echo()
         # else:
             # TODO do this better
             # if rng:
