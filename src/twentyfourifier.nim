@@ -21,17 +21,25 @@ proc `==`(left: RGBA, right: RGBA): bool =
 proc avg(left: RGBA, right: RGBA): RGBA =
     result = RGBA(r: cast[uint8]((cast[int32](left.r) + cast[int32](right.r)) shr 1), g: cast[uint8]((cast[int32](left.g) + cast[int32](right.g)) shr 1), b: cast[uint8]((cast[int32](left.b) + cast[int32](right.b)) shr 1), a: cast[uint8]((cast[int32](left.a) + cast[int32](right.a)) shr 1))
 
+proc dist(a: RGBA, b: RGBA): int =
+    var rmean = ( cast[int](a.r) + cast[int](b.r) ) shr 1
+    var r = cast[int](a.r) - cast[int](b.r)
+    var g = cast[int](a.g) - cast[int](b.g)
+    var b = cast[int](a.b) - cast[int](b.b)
+    result = (((512+rmean)*r*r) shr 8) + 4*g*g + (((767-rmean)*b*b) shr 8)
+
 proc closest(opt: openArray[RGBA], other: RGBA): RGBA =
     # c approximation
     # var dists: seq[int32] = @[]
-    var min = int32.high
+    var min = int.high
     var minindex = -1
     for i, c in enumerate(opt):
-        var rmean = ( cast[int32](c.r) + cast[int32](other.r) ) shr 1
-        var r = cast[int32](c.r) - cast[int32](other.r)
-        var g = cast[int32](c.g) - cast[int32](other.g)
-        var b = cast[int32](c.b) - cast[int32](other.b)
-        var dist = (((512+rmean)*r*r) shr 8) + 4*g*g + (((767-rmean)*b*b) shr 8)
+        # var rmean = ( cast[int](c.r) + cast[int](other.r) ) shr 1
+        # var r = cast[int](c.r) - cast[int](other.r)
+        # var g = cast[int](c.g) - cast[int](other.g)
+        # var b = cast[int](c.b) - cast[int](other.b)
+        # var dist = (((512+rmean)*r*r) shr 8) + 4*g*g + (((767-rmean)*b*b) shr 8)
+        var dist = dist(c, other)
         if dist == 0:
             return c
         elif dist < min:
