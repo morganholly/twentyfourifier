@@ -1,8 +1,9 @@
 var testfile = ""
 var outputfile = ""
+var mapfile = ""
 
 import nimPNG, arraymancer
-import std/[enumerate, strformat, random]
+import std/[enumerate, strformat, random, strutils]
 randomize()
 
 type
@@ -11,6 +12,21 @@ type
         g: uint8
         b: uint8
         a: uint8
+
+proc color(s: string): RGBA =
+    var s2 = s.strip(chars = {' ', '#', '_'})
+    if len(s2) == 8:
+        result = RGBA(r: cast[uint8](parseHexInt(s2[0..<2])),
+                        g: cast[uint8](parseHexInt(s2[2..<4])),
+                        b: cast[uint8](parseHexInt(s2[4..<6])),
+                        a: cast[uint8](parseHexInt(s2[6..<8])))
+    elif len(s2) == 6:
+        result = RGBA(r: cast[uint8](parseHexInt(s2[0..<2])),
+                        g: cast[uint8](parseHexInt(s2[2..<4])),
+                        b: cast[uint8](parseHexInt(s2[4..<6])),
+                        a: 255'u8)
+    else:
+        raise newException(ValueError, "input string must contain 6 or 8 hex chars")
 
 proc hexcode(color: RGBA): string =
     result = "#" & fmt"{cast[int](color.r):>02x}" & fmt"{cast[int](color.g):>02x}" & fmt"{cast[int](color.b):>02x}" & fmt"{cast[int](color.a):>02x}"
@@ -106,6 +122,7 @@ for y in 0 ..< png.height:
                         a: cast[uint8](png.data[4 * (y * png.width + x) + 3]))
 
 var upscaled = newTensor[RGBA]([outwidth, outheight])
+var map = newTensor[RGBA]([outwidth, outheight])
 # for y in countup(0, png.height-1, 2):
 #     var ym1, yp2: int
 #     if y == 0:
@@ -145,6 +162,128 @@ var upscaled = newTensor[RGBA]([outwidth, outheight])
 #         upscaled[y3+2, x3] = image[y+1, x]
 #         upscaled[y3+2, x3+1] = pick([image[yp2, x], image[yp2, x+1], image[y, x], image[y, x+1]])
 #         upscaled[y3+2, x3+2] = image[y+1, x+1]
+template top_left(): untyped = image[y, x]
+template top_right(): untyped = image[y, x+1]
+template bottom_left(): untyped = image[y+1, x]
+template bottom_right(): untyped = image[y+1, x+1]
+template out_top_left(): untyped = image[ym1, x]
+template out_top_right(): untyped = image[ym1, x+1]
+template out_right_top(): untyped = image[y, xp2]
+template out_right_bottom(): untyped = image[y+1, xp2]
+template out_bottom_right(): untyped = image[yp2, x+1]
+template out_bottom_left(): untyped = image[yp2, x]
+template out_left_bottom(): untyped = image[y+1, xm1]
+template out_left_top(): untyped = image[y, xm1]
+template newpx_top(): untyped = upscaled[y3, x3+1]
+template newpx_left(): untyped = upscaled[y3+1, x3]
+template newpx_center(): untyped = upscaled[y3+1, x3+1]
+template newpx_right(): untyped = upscaled[y3+1, x3+2]
+template newpx_bottom(): untyped = upscaled[y3+2, x3+1]
+template map_tl(): untyped = map[y3, x3]
+template map_tc(): untyped = map[y3, x3+1]
+template map_tr(): untyped = map[y3, x3+2]
+template map_cl(): untyped = map[y3+1, x3]
+template map_cc(): untyped = map[y3+1, x3+1]
+template map_cr(): untyped = map[y3+1, x3+2]
+template map_bl(): untyped = map[y3+2, x3]
+template map_bc(): untyped = map[y3+2, x3+1]
+template map_br(): untyped = map[y3+2, x3+2]
+template map_all(value: untyped): untyped =
+    map[y3, x3] = value
+    map[y3, x3+1] = value
+    map[y3, x3+2] = value
+    map[y3+1, x3] = value
+    map[y3+1, x3+1] = value
+    map[y3+1, x3+2] = value
+    map[y3+2, x3] = value
+    map[y3+2, x3+1] = value
+    map[y3+2, x3+2] = value
+template map_v(one, two, three: untyped): untyped =
+    map[y3, x3] = one
+    map[y3, x3+1] = one
+    map[y3, x3+2] = one
+    map[y3+1, x3] = two
+    map[y3+1, x3+1] = two
+    map[y3+1, x3+2] = two
+    map[y3+2, x3] = three
+    map[y3+2, x3+1] = three
+    map[y3+2, x3+2] = three
+template map_h(one, two, three: untyped): untyped =
+    map[y3, x3] = one
+    map[y3, x3+1] = two
+    map[y3, x3+2] = three
+    map[y3+1, x3] = one
+    map[y3+1, x3+1] = two
+    map[y3+1, x3+2] = three
+    map[y3+2, x3] = one
+    map[y3+2, x3+1] = two
+    map[y3+2, x3+2] = three
+template map_vt(value: untyped): untyped =
+    map[y3, x3] = value
+    map[y3, x3+1] = value
+    map[y3, x3+2] = value
+template map_vb(value: untyped): untyped =
+    map[y3+2, x3] = value
+    map[y3+2, x3+1] = value
+    map[y3+2, x3+2] = value
+template map_hl(value: untyped): untyped =
+    map[y3, x3] = value
+    map[y3+1, x3] = value
+    map[y3+2, x3] = value
+template map_hr(value: untyped): untyped =
+    map[y3, x3+2] = value
+    map[y3+1, x3+2] = value
+    map[y3+2, x3+2] = value
+template map_corner_tl(one, two: untyped): untyped =
+    map[y3, x3] = one
+    map[y3, x3+1] = one
+    map[y3, x3+2] = one
+    map[y3+1, x3] = one
+    map[y3+1, x3+1] = two
+    map[y3+1, x3+2] = two
+    map[y3+2, x3] = one
+    map[y3+2, x3+1] = two
+    map[y3+2, x3+2] = two
+template map_corner_tr(one, two: untyped): untyped =
+    map[y3, x3] = one
+    map[y3, x3+1] = one
+    map[y3, x3+2] = one
+    map[y3+1, x3] = two
+    map[y3+1, x3+1] = two
+    map[y3+1, x3+2] = one
+    map[y3+2, x3] = two
+    map[y3+2, x3+1] = two
+    map[y3+2, x3+2] = one
+template map_corner_bl(one, two: untyped): untyped =
+    map[y3, x3] = one
+    map[y3, x3+1] = two
+    map[y3, x3+2] = two
+    map[y3+1, x3] = one
+    map[y3+1, x3+1] = two
+    map[y3+1, x3+2] = two
+    map[y3+2, x3] = one
+    map[y3+2, x3+1] = one
+    map[y3+2, x3+2] = one
+template map_corner_br(one, two: untyped): untyped =
+    map[y3, x3] = two
+    map[y3, x3+1] = two
+    map[y3, x3+2] = one
+    map[y3+1, x3] = two
+    map[y3+1, x3+1] = two
+    map[y3+1, x3+2] = one
+    map[y3+2, x3] = one
+    map[y3+2, x3+1] = one
+    map[y3+2, x3+2] = one
+template map_diagonal(sides, left, right, center: untyped): untyped =
+    map[y3, x3] = left
+    map[y3, x3+1] = sides
+    map[y3, x3+2] = right
+    map[y3+1, x3] = sides
+    map[y3+1, x3+1] = center
+    map[y3+1, x3+2] = sides
+    map[y3+2, x3] = right
+    map[y3+2, x3+1] = sides
+    map[y3+2, x3+2] = left
 for y in countup(0, png.height-1, 2):
     # echo("y:", y)
     var ym1, yp2: int
@@ -178,23 +317,6 @@ for y in countup(0, png.height-1, 2):
         # y+2,x  y+2,x+1  y+2,x+2
         var x3 = scale(x)
         var y3 = scale(y)
-        template top_left(): untyped = image[y, x]
-        template top_right(): untyped = image[y, x+1]
-        template bottom_left(): untyped = image[y+1, x]
-        template bottom_right(): untyped = image[y+1, x+1]
-        template out_top_left(): untyped = image[ym1, x]
-        template out_top_right(): untyped = image[ym1, x+1]
-        template out_right_top(): untyped = image[y, xp2]
-        template out_right_bottom(): untyped = image[y+1, xp2]
-        template out_bottom_right(): untyped = image[yp2, x+1]
-        template out_bottom_left(): untyped = image[yp2, x]
-        template out_left_bottom(): untyped = image[y+1, xm1]
-        template out_left_top(): untyped = image[y, xm1]
-        template newpx_top(): untyped = upscaled[y3, x3+1]
-        template newpx_left(): untyped = upscaled[y3+1, x3]
-        template newpx_center(): untyped = upscaled[y3+1, x3+1]
-        template newpx_right(): untyped = upscaled[y3+1, x3+2]
-        template newpx_bottom(): untyped = upscaled[y3+2, x3+1]
         # var ar = [image[y, x], image[y, x+1], image[y+1, x], image[y+1, x+1]]
         # # var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[y+1, xm1], image[yp2, x], image[yp2, x+1], image[y, xm1]] # why did this make it work right before????
         # var ex = [image[ym1, x], image[ym1, x+1], image[y, xp2], image[y+1, xp2], image[yp2, x+1], image[yp2, x], image[y+1, xm1], image[y, xm1]]
@@ -211,6 +333,7 @@ for y in countup(0, png.height-1, 2):
             newpx_center() = top_left()
             newpx_right() = top_left()
             newpx_bottom() = top_left()
+            map_all(color("#400000"))
             continue
         newpx_top() = debugmagenta
         newpx_left() = debugmagenta
@@ -225,10 +348,12 @@ for y in countup(0, png.height-1, 2):
                 newpx_left() = top_left()
                 newpx_center() = top_left()
                 newpx_right() = top_left()
+                map_v(color("#3030B0"), color("#3030B0"), color("#006040"))
             else:
                 newpx_left() = bottom_left()
                 newpx_center() = bottom_left()
                 newpx_right() = bottom_left()
+                map_v(color("#3030B0"), color("#006040"), color("#006040"))
             continue
         let c13 = sum(top_right()) == sum(bottom_right())
         if c02 and c13:
@@ -239,10 +364,12 @@ for y in countup(0, png.height-1, 2):
                 newpx_top() = top_left()
                 newpx_center() = top_left()
                 newpx_bottom() = top_left()
+                map_h(color("#3030B0"), color("#3030B0"), color("#006040"))
             else:
                 newpx_top() = top_right()
                 newpx_center() = top_right()
                 newpx_bottom() = top_right()
+                map_h(color("#3030B0"), color("#006040"), color("#006040"))
             continue
         # TODO make the corners not look like shit
         elif c01 and c13: # ◱
@@ -264,6 +391,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_left()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            map_corner_tr(color("#906020"), color("#402040"))
             continue
             # if out_left_top() == top_right():
             #     newpx_left() = top_right()
@@ -292,6 +420,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_left() = top_left()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            map_corner_br(color("#906020"), color("#402040"))
             continue
             # if out_top_right() == bottom_right():
             #     newpx_top() = bottom_right()
@@ -320,6 +449,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_right() = top_right()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            map_corner_bl(color("#906020"), color("#402040"))
             continue
             # if out_top_left() == bottom_left():
             #     newpx_top() = bottom_left()
@@ -357,6 +487,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_right()
                 else:
                     raise newException(ArithmeticDefect, "1 or 0 + 2 or 0 should be at most 3 and at least 0.")
+            map_corner_tl(color("#906020"), color("#402040"))
             continue
             # if out_right_top() == top_left():
             #     newpx_right() = top_left()
@@ -379,6 +510,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_bottom() = bottom_left()
                     else:
                         newpx_bottom() = bottom_right()
+                    map_h(color("#604000"), color("#604000"), color("#000000"))
                 else:
                     newpx_left() = bottom_left()
                     newpx_center() = bottom_right()
@@ -387,6 +519,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_bottom() = bottom_right()
                     else:
                         newpx_bottom() = bottom_left()
+                    map_h(color("#000000"), color("#604000"), color("#604000"))
             elif cLeft:
                 newpx_left() = top_left()
                 newpx_center() = bottom_left()
@@ -395,6 +528,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_left()
                 else:
                     newpx_bottom() = bottom_right()
+                map_h(color("#604000"), color("#000000"), color("#000000"))
             elif cRight:
                 newpx_left() = bottom_left()
                 newpx_center() = bottom_right()
@@ -403,6 +537,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_right()
                 else:
                     newpx_bottom() = bottom_left()
+                map_h(color("#000000"), color("#000000"), color("#604000"))
             else:
                 if dist(top_left(), bottom_left()) < dist(top_left(), bottom_right()): # left < right, dist to 0/1
                     newpx_center() = bottom_left()
@@ -412,6 +547,8 @@ for y in countup(0, png.height-1, 2):
                     newpx_bottom() = bottom_left()
                 newpx_right() = bottom_right()
                 newpx_left() = bottom_left()
+                map_h(color("#000000"), color("#000000"), color("#000000"))
+            map_vt(color("#C0B030"))
             continue
             # echo(x, " ", y, " ", cLeft, " ", cRight)
             # for a in ar:
@@ -437,6 +574,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_left() = top_left()
                     else:
                         newpx_left() = bottom_left()
+                    map_v(color("#604000"), color("#604000"), color("#000000"))
                 else:
                     newpx_top() = top_right()
                     newpx_center() = bottom_left()
@@ -445,6 +583,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_left() = bottom_left()
                     else:
                         newpx_left() = top_left()
+                    map_v(color("#000000"), color("#604000"), color("#604000"))
             elif cTop:
                 newpx_top() = top_right()
                 newpx_center() = top_left()
@@ -453,6 +592,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_left() = top_left()
                 else:
                     newpx_left() = bottom_left()
+                map_v(color("#604000"), color("#000000"), color("#000000"))
             elif cBottom:
                 newpx_top() = top_right()
                 newpx_center() = bottom_left()
@@ -461,6 +601,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_left() = bottom_left()
                 else:
                     newpx_left() = top_left()
+                map_v(color("#000000"), color("#000000"), color("#604000"))
             else:
                 if dist(top_right(), top_left()) < dist(top_right(), bottom_left()): # top < bottom, dist to 1/3
                     newpx_center() = top_left()
@@ -470,6 +611,8 @@ for y in countup(0, png.height-1, 2):
                     newpx_left() = top_left()
                 newpx_bottom() = bottom_left()
                 newpx_top() = top_left()
+                map_v(color("#000000"), color("#000000"), color("#000000"))
+            map_hr(color("#C0B030"))
             continue
         elif c23:
             newpx_bottom() = bottom_right() # bottom_
@@ -484,6 +627,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_top() = top_left()
                     else:
                         newpx_top() = top_right()
+                    map_h(color("#604000"), color("#604000"), color("#000000"))
                 else:
                     newpx_left() = top_left()
                     newpx_center() = top_right()
@@ -492,6 +636,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_top() = top_right()
                     else:
                         newpx_top() = top_left()
+                    map_h(color("#000000"), color("#604000"), color("#604000"))
             elif cLeft:
                 newpx_left() = bottom_left()
                 newpx_center() = top_left()
@@ -500,6 +645,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_top() = top_left()
                 else:
                     newpx_top() = top_right()
+                map_h(color("#604000"), color("#000000"), color("#000000"))
             elif cRight:
                 newpx_left() = top_left()
                 newpx_center() = top_right()
@@ -508,6 +654,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_top() = top_right()
                 else:
                     newpx_top() = top_left()
+                map_h(color("#000000"), color("#000000"), color("#604000"))
             else:
                 if dist(bottom_left(), top_left()) < dist(bottom_left(), top_right()): # left < right, dist to 2/3
                     newpx_center() = top_left()
@@ -517,6 +664,8 @@ for y in countup(0, png.height-1, 2):
                     newpx_top() = top_left()
                 newpx_right() = top_right()
                 newpx_left() = top_left()
+                map_h(color("#000000"), color("#000000"), color("#000000"))
+            map_vb(color("#C0B030"))
             continue
         elif c02:
             newpx_left() = bottom_left() # left
@@ -535,6 +684,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_right() = top_right()
                     else:
                         newpx_right() = bottom_right()
+                    map_v(color("#604000"), color("#604000"), color("#000000"))
                 else:
                     newpx_top() = top_left()
                     newpx_center() = bottom_right()
@@ -543,6 +693,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_right() = bottom_right()
                     else:
                         newpx_right() = top_right()
+                    map_v(color("#000000"), color("#604000"), color("#604000"))
             elif cTop:
                 newpx_top() = top_left()
                 newpx_center() = top_right()
@@ -551,6 +702,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_right() = top_right()
                 else:
                     newpx_right() = bottom_right()
+                map_v(color("#604000"), color("#000000"), color("#000000"))
             elif cBottom:
                 newpx_top() = top_left()
                 newpx_center() = bottom_right()
@@ -559,6 +711,7 @@ for y in countup(0, png.height-1, 2):
                     newpx_right() = bottom_right()
                 else:
                     newpx_right() = top_right()
+                map_v(color("#000000"), color("#000000"), color("#604000"))
             else:
                 if dist(top_left(), top_right()) < dist(top_left(), bottom_right()): # top < bottom, dist to 1/3
                     newpx_center() = top_right()
@@ -568,6 +721,8 @@ for y in countup(0, png.height-1, 2):
                     newpx_right() = top_right()
                 newpx_bottom() = bottom_right()
                 newpx_top() = top_right()
+                map_v(color("#000000"), color("#000000"), color("#000000"))
+            map_hl(color("#C0B030"))
             continue
         let c03 = sum(top_left()) == sum(bottom_right())
         let c12 = sum(top_right()) == sum(bottom_left())
@@ -589,8 +744,9 @@ for y in countup(0, png.height-1, 2):
                         newpx_right(),
                         newpx_bottom()]
         if c03 and c12:
-            discard
+            map_diagonal(color("#000000"), color("#700040"), color("#007040"), color("#4040A0"))
         elif c03:
+            map_diagonal(color("#000000"), color("#700040"), color("#000000"), color("#700040"))
             newpx_center() = top_left()
             if dist(top_left(), top_right()) < dist(top_left(), bottom_left()):
                 var newpx1 = closest(arr_all, avg(top_left(), top_right()))
@@ -605,6 +761,7 @@ for y in countup(0, png.height-1, 2):
                 newpx_top() = closest(arr_all, avg(top_right(), out_top_left()))
                 newpx_right() = closest(arr_all, avg(top_right(), out_right_bottom()))
         elif c12:
+            map_diagonal(color("#000000"), color("#000000"), color("#007040"), color("#007040"))
             newpx_center() = top_right()
             if dist(top_right(), top_left()) < dist(top_right(), bottom_right()):
                 var newpx1 = closest(arr_all, avg(top_right(), top_left()))
@@ -620,6 +777,7 @@ for y in countup(0, png.height-1, 2):
                 newpx_left() = closest(arr_all, avg(top_left(), out_left_bottom()))
         else:
             discard
+            map_diagonal(color("#402060"), color("#000000"), color("#000000"), color("#A00000"))
         # if (newpx_top() == debugmagenta) and (newpx_center() != debugmagenta):
         #     echo("x", x, " y", y, " ", c03, " ", c12)
         #     for a in ar:
@@ -653,6 +811,14 @@ for y in 0 ..< outheight:
     for x in 0 ..< outwidth:
         output &= @[upscaled[y, x].r, upscaled[y, x].g, upscaled[y, x].b, upscaled[y, x].a]
 discard savePNG32(outputfile, output, outwidth, outheight)
+var map_out: seq[uint8] = @[]
+for y in 0 ..< outheight:
+    for x in 0 ..< outwidth:
+        # if map[y, x].a > 0:
+        map_out &= @[map[y, x].r, map[y, x].g, map[y, x].b, map[y, x].a]
+        # else:
+        #     map_out &= @[upscaled[y, x].r shr 1, upscaled[y, x].g shr 1, upscaled[y, x].b shr 1, upscaled[y, x].a]
+discard savePNG32(mapfile, map_out, outwidth, outheight)
 
 #3d2a42ff #574658ff #3d2a42ff #3d2a42ff #3d2a42ff #574658ff #574658ff #b29767ff #cdc397ff #b29767ff #8e574bff #222435ff #3d2a42ff #3d2a42ff #643633ff #19131dff 
 #6e6979ff #6e6979ff #574658ff #3d2a42ff #959aa6ff #574658ff #3d2a42ff #8e574bff #b29767ff #643633ff #643633ff #8e574bff #3d2a42ff #3d2a42ff #3d2a42ff #222435ff 
