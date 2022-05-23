@@ -174,6 +174,10 @@ template out_bottom_right(): untyped = image[yp2, x+1]
 template out_bottom_left(): untyped = image[yp2, x]
 template out_left_bottom(): untyped = image[y+1, xm1]
 template out_left_top(): untyped = image[y, xm1]
+template out_corner_tl(): untyped = image[ym1, xm1]
+template out_corner_tr(): untyped = image[ym1, xp2]
+template out_corner_bl(): untyped = image[yp2, xm1]
+template out_corner_br(): untyped = image[yp2, xp2]
 template newpx_top(): untyped = upscaled[y3, x3+1]
 template newpx_left(): untyped = upscaled[y3+1, x3]
 template newpx_center(): untyped = upscaled[y3+1, x3+1]
@@ -743,9 +747,7 @@ for y in countup(0, png.height-1, 2):
                         newpx_center(),
                         newpx_right(),
                         newpx_bottom()]
-        if c03 and c12:
-            map_diagonal(color("#000000"), color("#700040"), color("#007040"), color("#4040A0"))
-        elif c03:
+        if c03 and not c12:
             map_diagonal(color("#000000"), color("#700040"), color("#000000"), color("#700040"))
             newpx_center() = top_left()
             if dist(top_left(), top_right()) < dist(top_left(), bottom_left()):
@@ -760,7 +762,7 @@ for y in countup(0, png.height-1, 2):
                 newpx_bottom() = newpx1
                 newpx_top() = closest(arr_all, avg(top_right(), out_top_left()))
                 newpx_right() = closest(arr_all, avg(top_right(), out_right_bottom()))
-        elif c12:
+        elif c12 and not c03:
             map_diagonal(color("#000000"), color("#000000"), color("#007040"), color("#007040"))
             newpx_center() = top_right()
             if dist(top_right(), top_left()) < dist(top_right(), bottom_right()):
@@ -775,8 +777,73 @@ for y in countup(0, png.height-1, 2):
                 newpx_bottom() = newpx1
                 newpx_top() = closest(arr_all, avg(top_left(), out_top_right()))
                 newpx_left() = closest(arr_all, avg(top_left(), out_left_bottom()))
-        else:
+        let c0left = top_left() == out_left_top()
+        let c0corner = top_left() == out_corner_tl()
+        let c0top = top_left() == out_top_left()
+        let c0count = (if c0left: 1 else: 0) + (if c0corner: 1 else: 0) + (if c0top: 1 else: 0)
+        let c1right = top_right() == out_right_top()
+        let c1corner = top_right() == out_corner_tr()
+        let c1top = top_right() == out_top_right()
+        let c1count = (if c1right: 1 else: 0) + (if c1corner: 1 else: 0) + (if c1top: 1 else: 0)
+        let c2left = bottom_left() == out_left_bottom()
+        let c2corner = bottom_left() == out_corner_bl()
+        let c2bottom = bottom_left() == out_bottom_left()
+        let c2count = (if c2left: 1 else: 0) + (if c2corner: 1 else: 0) + (if c2bottom: 1 else: 0)
+        let c3right = bottom_right() == out_right_bottom()
+        let c3corner = bottom_right() == out_corner_br()
+        let c3bottom = bottom_right() == out_bottom_right()
+        let c3count = (if c3right: 1 else: 0) + (if c3corner: 1 else: 0) + (if c3bottom: 1 else: 0)
+        if c03 and c12:
+            map_diagonal(color("#000000"), color("#700040"), color("#007040"), color("#4040A0"))
             discard
+        else:
+            # TODO maybe try sorting/constructing a tree of the relations to better fill in the pixels
+            if c0count > c1count:
+                newpx_top() = top_left()
+            elif c0count < c1count:
+                newpx_top() = top_right()
+            else: # elif (c0count == 0) and (c1count == 0):
+                newpx_top() = closest(arr_all, avg(top_left(), top_right()))
+            if c1count > c3count:
+                newpx_right() = top_right()
+            elif c1count < c3count:
+                newpx_right() = bottom_right()
+            else: # elif (c1count == 0) and (c3count == 0):
+                newpx_right() = closest(arr_all, avg(top_right(), bottom_right()))
+            if c0count > c2count:
+                newpx_left() = top_left()
+            elif c0count < c2count:
+                newpx_left() = bottom_left()
+            else: # elif (c0count == 0) and (c2count == 0):
+                newpx_left() = closest(arr_all, avg(top_left(), bottom_left()))
+            if c2count > c3count:
+                newpx_bottom() = bottom_left()
+            elif c2count < c3count:
+                newpx_bottom() = bottom_right()
+            else: # elif (c2count == 0) and (c3count == 0):
+                newpx_bottom() = closest(arr_all, avg(bottom_left(), bottom_right()))
+            if c0count > c1count:
+                if c0count > c2count:
+                    if c0count > c3count:
+                        newpx_center() = top_left()
+                    else:
+                        newpx_center() = bottom_right()
+                else:
+                    if c2count > c3count:
+                        newpx_center() = bottom_left()
+                    else:
+                        newpx_center() = bottom_right()
+            else:
+                if c1count > c2count:
+                    if c1count > c3count:
+                        newpx_center() = top_right()
+                    else:
+                        newpx_center() = bottom_right()
+                else:
+                    if c2count > c3count:
+                        newpx_center() = bottom_left()
+                    else:
+                        newpx_center() = bottom_right()
             map_diagonal(color("#402060"), color("#000000"), color("#000000"), color("#A00000"))
         # if (newpx_top() == debugmagenta) and (newpx_center() != debugmagenta):
         #     echo("x", x, " y", y, " ", c03, " ", c12)
